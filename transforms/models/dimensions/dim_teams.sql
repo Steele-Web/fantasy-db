@@ -4,7 +4,10 @@
 -- franchise-CANONICAL (e.g. the 2018-19 Raiders carry LV, not OAK) so weekly stats
 -- — which already use canonical abbrs — join cleanly; franchise_id still groups the
 -- relocation. team_id = season*100 + franchise_id is stable and deterministic.
--- Upserts on team_id.
+-- dim_games holds a foreign key to team_id, and DuckDB forbids deleting OR updating a
+-- referenced parent key (both delete+insert and merge touch it). So this model is
+-- additive: on a re-run it inserts only brand-new team_ids (e.g. a newly ingested
+-- season) and never disturbs existing referenced rows.
 {{ config(materialized="incremental", unique_key="team_id") }}
 
 with team_meta as (
@@ -65,3 +68,6 @@ select
     m.division                                        as division
 from season_teams st
 join team_meta m on m.abbr = st.abbr
+{% if is_incremental() %}
+where (st.season * 100 + m.franchise_id) not in (select team_id from {{ this }})
+{% endif %}

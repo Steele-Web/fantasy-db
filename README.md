@@ -63,9 +63,10 @@ uv run --extra transforms dbt run --project-dir transforms --profiles-dir transf
 ```
 
 The player-game pipeline is built end-to-end: `dim_franchises`, `dim_teams`,
-`dim_games`, and `fct_player_game_stats` are populated from nflverse weekly stats +
-schedules (2018–2025). The remaining marts (`fct_projections`, `fct_team_game_stats`,
-`fct_vegas_lines`, `fct_pbp`) are still scaffolded stubs that compile but emit no rows.
+`dim_games`, `fct_player_game_stats`, and `fct_vegas_lines` are populated from nflverse
+weekly stats, schedules, snap counts, Next Gen Stats, and play-by-play (2018–2025).
+The remaining marts (`fct_projections`, `fct_team_game_stats`, `fct_pbp`) are still
+scaffolded stubs that compile but emit no rows.
 
 ## Status
 
@@ -75,12 +76,14 @@ schedules (2018–2025). The remaining marts (`fct_projections`, `fct_team_game_
   `player_id_crosswalk` (sleeper, gsis, espn, yahoo, sportradar, rotowire,
   rotoworld, stats, swish, fantasy_data, oddsjam). Pull on a cadence:
   `fdb-ingest sleeper && fdb-stage sleeper`, then `dbt run`.
-- **pfr, ngs, vegas, fantasypros**: stubs with the target raw layout
-  documented in each module.
+- **ngs** scraper + staging: working end-to-end (passing/rushing/receiving Next Gen
+  Stats from nflverse releases). **pfr, vegas, fantasypros**: stubs with the target
+  raw layout documented in each module.
 - **dim_players + player_id_crosswalk**: built from sleeper, extended with the
   nflverse players master (gsis ids + bio for historical players sleeper omits).
-- **dim_franchises / dim_teams / dim_games / fct_player_game_stats**: built from
-  nflverse schedules + weekly stats for 2018–2025. Other marts: scaffolded stubs.
+- **dim_franchises / dim_teams / dim_games / fct_player_game_stats / fct_vegas_lines**:
+  built for 2018–2025 from nflverse schedules + weekly stats, enriched with snap counts,
+  Next Gen Stats, and play-by-play red-zone usage. Other marts: scaffolded stubs.
 - **apps**: `fdb-query` works; the four app packages are stubs.
 
 Add a source by following the nflverse pattern: a `scrapers/<source>.py` that

@@ -31,4 +31,22 @@ schedules for 2018–2025 (147k player-game rows). Two gotchas baked into those 
   the `canonical_team()` macro normalizes both sides. dim_teams abbrs are franchise-canonical.
 - crosswalk/dim_players extended past Sleeper via the nflverse players master, keyed by
   `int_nflverse_player_keys` (mints ids ABOVE the sleeper max; see [[sleeper-crosswalk]]).
-Still stubs: `fct_projections`, `fct_team_game_stats`, `fct_vegas_lines`, `fct_pbp`.
+
+FK + incremental gotcha (bit me): the migration declares FKs (dim_games.home/away_team_id
+-> dim_teams.team_id; dim_teams.franchise_id -> dim_franchises). DuckDB forbids deleting OR
+updating a referenced parent key, so on a RE-RUN both delete+insert AND merge (merge does
+`UPDATE BY NAME`, which rewrites the PK) fail with "key ... still referenced". Fix: FK-parent
+dims (`dim_franchises`, `dim_teams`) are ADDITIVE — `{% if is_incremental() %} where <key>
+not in (select <key> from {{ this }}) {% endif %}` — insert only new keys, never touch
+existing rows. The first full run worked only because all tables were empty. A full `dbt run`
+is now idempotent.
+
+fct_player_game_stats enrichment is joined on (player_id, season, week) from ephemeral int
+models: `int_snap_counts` (snaps; keyed by pfr_player_id -> crosswalk source='pfr'),
+`int_ngs_player_week` (NGS separation/cushion/RYOE; gsis; NGS numbers the SB week 23 -> remap
+to 22), `int_pbp_redzone` (rz/inside-5 carries+targets; reads RAW pbp directly with a 7-col
+projection — full pbp staging OOMs on `DISTINCT *` over 372 cols). routes_run and
+rush_yards_before_contact stay NULL (not in nflverse free feeds). New `ngs` source has a
+scraper+staging (one file per type, all seasons). fct_vegas_lines built from schedule closing
+lines (sportsbook='nflverse_closing'). Still stubs: `fct_projections`, `fct_team_game_stats`,
+`fct_pbp`.

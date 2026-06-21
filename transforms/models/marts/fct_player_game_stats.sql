@@ -6,10 +6,10 @@
 -- (source='gsis'); team/opponent abbrs map to team_id via dim_teams. game_id is
 -- derived by matching (season, week, team) against dim_games rather than the feed's
 -- own game_id column, which nflverse only populates for some seasons — the lookup
--- is exact for every season and keeps the FK to dim_games clean. Snap-count and NGS
--- columns (offensive_snaps, routes_run,
--- cpoe-derived separation/cushion, rush_yards_before_contact/over_expected, red-zone
--- usage) stay NULL until those datasets are ingested.
+-- is exact for every season and keeps the FK to dim_games clean. Snap counts, NGS
+-- (separation/cushion/rush-yards-over-expected) and red-zone usage are joined in on
+-- (player_id, season, week) from their intermediate models. Only routes_run and
+-- rush_yards_before_contact stay NULL — nflverse's free feeds don't carry them.
 {{ config(materialized="incremental", unique_key=["player_id", "game_id"]) }}
 
 with ps as (
@@ -42,9 +42,9 @@ select
     dopp.team_id                                    as opponent_id,
     ps.position                                     as position,
 
-    -- Snap counts / usage (need snap_counts/NGS — not yet ingested)
-    cast(null as integer)                           as offensive_snaps,
-    cast(null as decimal(5,2))                      as offensive_snap_pct,
+    -- Snap counts / usage (routes_run not available in nflverse free feeds)
+    sc.offensive_snaps                              as offensive_snaps,
+    sc.offensive_snap_pct                           as offensive_snap_pct,
     cast(null as integer)                           as routes_run,
 
     -- Passing
@@ -63,7 +63,7 @@ select
     cast(ps.rushing_yards as integer)               as rush_yards,
     cast(ps.rushing_tds as integer)                 as rush_tds,
     cast(null as decimal(6,2))                      as rush_yards_before_contact,
-    cast(null as decimal(6,2))                      as rush_yards_over_expected,
+    ng.rush_yards_over_expected                     as rush_yards_over_expected,
 
     -- Receiving
     cast(ps.targets as integer)                     as targets,
@@ -74,14 +74,14 @@ select
     cast(ps.receiving_yards_after_catch as integer) as yac,
     cast(ps.target_share as decimal(5,2))           as target_share,
     cast(ps.air_yards_share as decimal(5,2))        as air_yards_share,
-    cast(null as decimal(4,2))                      as avg_separation,
-    cast(null as decimal(4,2))                      as avg_cushion,
+    ng.avg_separation                               as avg_separation,
+    ng.avg_cushion                                  as avg_cushion,
 
-    -- Red zone / high-value (need pbp — not yet ingested)
-    cast(null as integer)                           as rz_carries,
-    cast(null as integer)                           as rz_targets,
-    cast(null as integer)                           as inside_5_carries,
-    cast(null as integer)                           as inside_5_targets,
+    -- Red zone / high-value (from play-by-play)
+    rz.rz_carries                                   as rz_carries,
+    rz.rz_targets                                   as rz_targets,
+    rz.inside_5_carries                             as inside_5_carries,
+    rz.inside_5_targets                             as inside_5_targets,
 
     -- Misc
     cast(coalesce(ps.sack_fumbles, 0)
@@ -100,6 +100,12 @@ join xwalk x on x.gsis_id = ps.player_id
 join teams dt on dt.season = ps.season and dt.abbr = {{ canonical_team("ps.team") }}
 join team_games tg on tg.season = ps.season and tg.week = ps.week and tg.team_id = dt.team_id
 left join teams dopp on dopp.season = ps.season and dopp.abbr = {{ canonical_team("ps.opponent_team") }}
+left join {{ ref("int_snap_counts") }} sc
+    on sc.player_id = x.player_id and sc.season = ps.season and sc.week = ps.week
+left join {{ ref("int_ngs_player_week") }} ng
+    on ng.player_id = x.player_id and ng.season = ps.season and ng.week = ps.week
+left join {{ ref("int_pbp_redzone") }} rz
+    on rz.player_id = x.player_id and rz.season = ps.season and rz.week = ps.week
 where ps.player_id is not null
 -- one row per player per game (weekly feed is already 1:1, guard the PK anyway)
 qualify row_number() over (partition by x.player_id, tg.game_id order by ps.season) = 1

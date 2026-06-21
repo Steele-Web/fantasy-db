@@ -14,7 +14,7 @@ import argparse
 import importlib
 import sys
 
-SOURCES = ["nflverse", "pfr", "sleeper"]
+SOURCES = ["nflverse", "pfr", "sleeper", "ngs"]
 
 
 def _parse_target(target: str) -> tuple[str, list[str] | None]:

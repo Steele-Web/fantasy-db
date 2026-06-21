@@ -22,7 +22,7 @@ sources:
     request_delay_seconds: 6
 
   ngs:
-    enabled: false
+    enabled: true
     # Next Gen Stats are distributed via nflverse releases as well.
     release_base: "https://github.com/nflverse/nflverse-data/releases/download"
     rate_limit_per_minute: 60

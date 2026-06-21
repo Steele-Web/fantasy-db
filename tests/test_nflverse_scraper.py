@@ -23,7 +23,7 @@ def test_read_expr_picks_reader_by_format():
 
 def test_per_season_url_includes_year():
     url = _dataset("player_stats").url(2023)
-    assert "player_stats_2023.parquet" in url
+    assert "stats_player_week_2023.parquet" in url
 
 
 def test_run_reports_unknown_datasets_without_crashing(capsys, monkeypatch):
