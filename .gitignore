@@ -1,9 +1,27 @@
-node_modules/
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
 
-# Local DuckDB database + WAL (rebuildable from source via `npm run ingest`)
+# DuckDB database + WAL (rebuildable from source via the pipeline)
 data/*.duckdb
 data/*.duckdb.wal
 data/*.db
+
+# Data lake layers — large and reproducible from the scrapers
+data/raw/**
+data/staging/**
+!data/raw/.gitkeep
+!data/staging/.gitkeep
+
+# dbt
+transforms/target/
+transforms/dbt_packages/
+transforms/logs/
+transforms/.user.yml
 
 # Misc
 .DS_Store

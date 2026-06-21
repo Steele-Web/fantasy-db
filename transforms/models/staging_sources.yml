@@ -1,0 +1,18 @@
+version: 2
+
+# The staging layer lives as Hive-partitioned Parquet under data/staging/, not as
+# DuckDB tables. Models read it with read_parquet(...) directly (see the stubs),
+# e.g.:
+#
+#   select * from read_parquet(
+#     'data/staging/nflverse_player_stats/**/*.parquet',
+#     hive_partitioning = true, union_by_name = true
+#   )
+#
+# This file is a placeholder for documenting/testing those staging inputs as dbt
+# sources once the marts are fleshed out.
+sources:
+  - name: staging
+    description: "Cleaned, typed Parquet produced by the staging/ transforms."
+    meta:
+      external_location: "data/staging"

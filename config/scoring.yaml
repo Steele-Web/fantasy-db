@@ -1,0 +1,70 @@
+# League scoring rules. Each key is a `scoring_format` and mirrors the columns of
+# the `scoring_settings` table in the DuckDB marts. Apps read these to turn raw
+# stats into fantasy points without rebuilding the underlying stats.
+#
+# Defaults reflect standard industry values; override per format as needed.
+
+ppr:
+  pass_yard_pts: 0.04
+  pass_td_pts: 4.0
+  pass_int_pts: -2.0
+  rush_yard_pts: 0.1
+  rush_td_pts: 6.0
+  rec_pts: 1.0
+  rec_yard_pts: 0.1
+  rec_td_pts: 6.0
+  fumble_lost_pts: -2.0
+  two_pt_pts: 2.0
+  bonus_100_rush_yds: 0
+  bonus_100_rec_yds: 0
+  bonus_300_pass_yds: 0
+  te_premium: 0
+
+half_ppr:
+  pass_yard_pts: 0.04
+  pass_td_pts: 4.0
+  pass_int_pts: -2.0
+  rush_yard_pts: 0.1
+  rush_td_pts: 6.0
+  rec_pts: 0.5
+  rec_yard_pts: 0.1
+  rec_td_pts: 6.0
+  fumble_lost_pts: -2.0
+  two_pt_pts: 2.0
+  bonus_100_rush_yds: 0
+  bonus_100_rec_yds: 0
+  bonus_300_pass_yds: 0
+  te_premium: 0
+
+standard:
+  pass_yard_pts: 0.04
+  pass_td_pts: 4.0
+  pass_int_pts: -2.0
+  rush_yard_pts: 0.1
+  rush_td_pts: 6.0
+  rec_pts: 0.0
+  rec_yard_pts: 0.1
+  rec_td_pts: 6.0
+  fumble_lost_pts: -2.0
+  two_pt_pts: 2.0
+  bonus_100_rush_yds: 0
+  bonus_100_rec_yds: 0
+  bonus_300_pass_yds: 0
+  te_premium: 0
+
+# Example custom league. Copy and tune to match your real settings.
+my_league:
+  pass_yard_pts: 0.04
+  pass_td_pts: 6.0
+  pass_int_pts: -2.0
+  rush_yard_pts: 0.1
+  rush_td_pts: 6.0
+  rec_pts: 1.0
+  rec_yard_pts: 0.1
+  rec_td_pts: 6.0
+  fumble_lost_pts: -2.0
+  two_pt_pts: 2.0
+  bonus_100_rush_yds: 0
+  bonus_100_rec_yds: 0
+  bonus_300_pass_yds: 0
+  te_premium: 0.5

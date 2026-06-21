@@ -1,0 +1,44 @@
+# Scraper configuration: base URLs, rate limits, and per-source toggles.
+# Scrapers read this to stay polite (Pro Football Reference in particular bans
+# clients that hammer it) and to know where to fetch from.
+
+defaults:
+  user_agent: "fantasy-db/0.1 (personal analytics; contact via repo)"
+  request_timeout_seconds: 30
+  max_retries: 3
+
+sources:
+  nflverse:
+    enabled: true
+    # nflverse publishes parquet/csv on GitHub releases; read directly over httpfs.
+    release_base: "https://github.com/nflverse/nflverse-data/releases/download"
+    rate_limit_per_minute: 60
+
+  pfr:
+    enabled: false
+    base_url: "https://www.pro-football-reference.com"
+    # PFR is strict: stay at/under ~10 requests/min and cache aggressively.
+    rate_limit_per_minute: 10
+    request_delay_seconds: 6
+
+  ngs:
+    enabled: false
+    # Next Gen Stats are distributed via nflverse releases as well.
+    release_base: "https://github.com/nflverse/nflverse-data/releases/download"
+    rate_limit_per_minute: 60
+
+  vegas:
+    enabled: false
+    # Set provider + api_key via env; do not commit secrets here.
+    provider: "the_odds_api"
+    rate_limit_per_minute: 30
+
+  fantasypros:
+    enabled: false
+    base_url: "https://www.fantasypros.com"
+    rate_limit_per_minute: 20
+
+  sleeper:
+    enabled: false
+    base_url: "https://api.sleeper.app/v1"
+    rate_limit_per_minute: 60

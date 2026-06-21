@@ -1,0 +1,13 @@
+# dbt-duckdb profile. Run dbt from this directory with `--profiles-dir .`
+# (or set DBT_PROFILES_DIR=transforms). The path is relative to where dbt runs,
+# so invoke dbt from the repo root: `dbt run --project-dir transforms --profiles-dir transforms`.
+fantasy_db:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "data/fantasy.duckdb"
+      extensions:
+        - httpfs
+      # Read staging parquet directly in models via read_parquet('data/staging/...').
+      threads: 4

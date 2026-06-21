@@ -1,0 +1,20 @@
+name: "fantasy_transforms"
+version: "0.1.0"
+config-version: 2
+
+# Maps to the output in profiles.yml (this directory).
+profile: "fantasy_db"
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+# The DuckDB schema (tables, PKs, types) is owned by db/migrations/ — run
+# `fdb-migrate` first. dbt does not own that DDL: every model is incremental so it
+# upserts INTO the migration-created tables on its natural key rather than dropping
+# them. `on_schema_change: ignore` keeps the migration column set authoritative.
+models:
+  fantasy_transforms:
+    +materialized: incremental
+    +incremental_strategy: delete+insert
+    +on_schema_change: ignore

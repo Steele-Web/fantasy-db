@@ -1,0 +1,1 @@
+- [dbt/migration ownership](dbt-migration-ownership.md) — migrations own DuckDB schema; dbt upserts into it (run fdb-migrate before dbt run)

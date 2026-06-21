@@ -1,0 +1,19 @@
+# Your specific leagues. Apps (draft tool, waiver analyzer, projections) read this
+# to know roster construction, scoring format, and platform IDs for each league.
+
+leagues:
+  - id: home_league
+    name: "Home League"
+    platform: sleeper          # sleeper | espn | yahoo
+    platform_league_id: "REPLACE_ME"
+    scoring_format: ppr        # must match a key in scoring.yaml
+    teams: 12
+    roster:
+      QB: 1
+      RB: 2
+      WR: 2
+      TE: 1
+      FLEX: 1                  # RB/WR/TE
+      K: 1
+      DST: 1
+      BENCH: 6
