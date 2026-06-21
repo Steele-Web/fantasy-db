@@ -28,8 +28,30 @@ unpivoted as (
     union all select player_id, 'swish',        swish_id        from players where swish_id        is not null
     union all select player_id, 'fantasy_data', fantasy_data_id from players where fantasy_data_id is not null
     union all select player_id, 'oddsjam',      oddsjam_id      from players where oddsjam_id      is not null
+),
+
+-- The nflverse master extends the crosswalk to every gsis id (so weekly stats
+-- always resolve), plus the pfr/espn ids it carries. For players both sources know
+-- the player_id is identical, so these rows just reinforce the Sleeper ones; the
+-- qualify below keeps a single deterministic row per (source, source_id).
+nflverse_keys as (
+    select nk.player_id, nk.gsis_id, p.pfr_id, p.espn_id
+    from {{ ref("int_nflverse_player_keys") }} nk
+    join {{ ref("stg_nflverse_players") }} p on p.gsis_id = nk.gsis_id
+),
+
+nflverse_ids as (
+    select player_id, 'gsis' as source, gsis_id  as source_id from nflverse_keys where gsis_id  is not null
+    union all select player_id, 'pfr',  pfr_id  from nflverse_keys where pfr_id  is not null
+    union all select player_id, 'espn', espn_id from nflverse_keys where espn_id is not null
+),
+
+all_ids as (
+    select * from unpivoted
+    union all
+    select * from nflverse_ids
 )
 
 select player_id, source, source_id
-from unpivoted
+from all_ids
 qualify row_number() over (partition by source, source_id order by player_id) = 1

@@ -29,7 +29,7 @@ CONFIG_DIR: Path = REPO_ROOT / "config"
 
 def _default_seasons() -> list[int]:
     """Last five seasons. Bump `end` as new seasons complete."""
-    end = 2024
+    end = 2025
     start = end - 4
     return list(range(start, end + 1))
 

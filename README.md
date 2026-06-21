@@ -62,8 +62,10 @@ default seasons (2020–2024) with `SEASONS`. See `config/settings.py`.
 uv run --extra transforms dbt run --project-dir transforms --profiles-dir transforms
 ```
 
-The dbt models are currently scaffolded stubs that compile but emit no rows — they
-mark out the joins (crosswalk, team mapping) still to be built.
+The player-game pipeline is built end-to-end: `dim_franchises`, `dim_teams`,
+`dim_games`, and `fct_player_game_stats` are populated from nflverse weekly stats +
+schedules (2018–2025). The remaining marts (`fct_projections`, `fct_team_game_stats`,
+`fct_vegas_lines`, `fct_pbp`) are still scaffolded stubs that compile but emit no rows.
 
 ## Status
 
@@ -75,8 +77,10 @@ mark out the joins (crosswalk, team mapping) still to be built.
   `fdb-ingest sleeper && fdb-stage sleeper`, then `dbt run`.
 - **pfr, ngs, vegas, fantasypros**: stubs with the target raw layout
   documented in each module.
-- **dim_players + player_id_crosswalk**: built from sleeper. Other marts/
-  dimensions: scaffolded stubs.
+- **dim_players + player_id_crosswalk**: built from sleeper, extended with the
+  nflverse players master (gsis ids + bio for historical players sleeper omits).
+- **dim_franchises / dim_teams / dim_games / fct_player_game_stats**: built from
+  nflverse schedules + weekly stats for 2018–2025. Other marts: scaffolded stubs.
 - **apps**: `fdb-query` works; the four app packages are stubs.
 
 Add a source by following the nflverse pattern: a `scrapers/<source>.py` that

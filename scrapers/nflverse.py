@@ -60,10 +60,13 @@ DATASETS: list[Dataset] = [
     ),
     Dataset(
         "player_stats",
-        "Weekly player stats (offense), per season",
+        "Weekly player stats (offense + kicking + defense), per season",
         "parquet",
         True,
-        lambda y: _release(f"player_stats/player_stats_{y}.parquet"),
+        # nflverse migrated weekly stats from the legacy `player_stats/player_stats_<y>`
+        # asset (offense-only, 53 cols, no 2025) to the combined `stats_player`
+        # release (115 cols incl. game_id, kicking, IDP) covering 2018+.
+        lambda y: _release(f"stats_player/stats_player_week_{y}.parquet"),
     ),
     Dataset(
         "pbp",
