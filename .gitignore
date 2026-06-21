@@ -1,0 +1,12 @@
+node_modules/
+
+# Local DuckDB database + WAL (rebuildable from source via `npm run ingest`)
+data/*.duckdb
+data/*.duckdb.wal
+data/*.db
+
+# Misc
+.DS_Store
+*.log
+.env
+.env.local
