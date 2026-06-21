@@ -45,8 +45,16 @@ fct_player_game_stats enrichment is joined on (player_id, season, week) from eph
 models: `int_snap_counts` (snaps; keyed by pfr_player_id -> crosswalk source='pfr'),
 `int_ngs_player_week` (NGS separation/cushion/RYOE; gsis; NGS numbers the SB week 23 -> remap
 to 22), `int_pbp_redzone` (rz/inside-5 carries+targets; reads RAW pbp directly with a 7-col
-projection — full pbp staging OOMs on `DISTINCT *` over 372 cols). routes_run and
-rush_yards_before_contact stay NULL (not in nflverse free feeds). New `ngs` source has a
-scraper+staging (one file per type, all seasons). fct_vegas_lines built from schedule closing
-lines (sportsbook='nflverse_closing'). Still stubs: `fct_projections`, `fct_team_game_stats`,
-`fct_pbp`.
+projection). routes_run and rush_yards_before_contact stay NULL (not in nflverse free feeds).
+New `ngs` source has a scraper+staging (one file per type, all seasons). fct_vegas_lines built
+from schedule closing lines (sportsbook='nflverse_closing').
+
+pbp is now fully built (2026-06-21): staging skips the full-row `DISTINCT *` for pbp
+(`_SKIP_DEDUP` in staging/nflverse.py — it OOMs over 370+ cols and pbp is already unique on
+(game_id, play_id)); the no-dedup partitioned COPY is cheap. The pbp staging step calls
+`db.connection.refresh_pbp_view()` to create `v_pbp` (full 370-col fidelity over the staged
+parquet). `fct_pbp` is a dbt-OWNED trimmed/typed per-play mart (63 cols, keyed game_id/play_id,
+skill actors kept as native gsis ids -> join dim_players via crosswalk source='gsis'); since no
+migration backs it, the old stub's narrow schema means you must `dbt run --select fct_pbp
+--full-refresh` once when the column set changes. Cross-checks: pbp rush_touchdown plays ==
+fct_player_game_stats rush_tds per season. Still stubs: `fct_projections`, `fct_team_game_stats`.

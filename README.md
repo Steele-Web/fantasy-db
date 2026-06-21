@@ -63,9 +63,10 @@ uv run --extra transforms dbt run --project-dir transforms --profiles-dir transf
 ```
 
 The player-game pipeline is built end-to-end: `dim_franchises`, `dim_teams`,
-`dim_games`, `fct_player_game_stats`, and `fct_vegas_lines` are populated from nflverse
-weekly stats, schedules, snap counts, Next Gen Stats, and play-by-play (2018–2025).
-The remaining marts (`fct_projections`, `fct_team_game_stats`, `fct_pbp`) are still
+`dim_games`, `fct_player_game_stats`, `fct_vegas_lines`, and `fct_pbp` are populated
+from nflverse weekly stats, schedules, snap counts, Next Gen Stats, and play-by-play
+(2018–2025). Full-fidelity play-by-play also stays in Parquet, exposed as the `v_pbp`
+view. The remaining marts (`fct_projections`, `fct_team_game_stats`) are still
 scaffolded stubs that compile but emit no rows.
 
 ## Status
@@ -83,7 +84,10 @@ scaffolded stubs that compile but emit no rows.
   nflverse players master (gsis ids + bio for historical players sleeper omits).
 - **dim_franchises / dim_teams / dim_games / fct_player_game_stats / fct_vegas_lines**:
   built for 2018–2025 from nflverse schedules + weekly stats, enriched with snap counts,
-  Next Gen Stats, and play-by-play red-zone usage. Other marts: scaffolded stubs.
+  Next Gen Stats, and play-by-play red-zone usage.
+- **fct_pbp + v_pbp**: play-by-play is staged (full 370-col fidelity in `v_pbp`) and a
+  trimmed, typed per-play mart (`fct_pbp`, keyed on game_id/play_id) is materialized.
+  Other marts (`fct_projections`, `fct_team_game_stats`): scaffolded stubs.
 - **apps**: `fdb-query` works; the four app packages are stubs.
 
 Add a source by following the nflverse pattern: a `scrapers/<source>.py` that

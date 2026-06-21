@@ -23,13 +23,19 @@ WEEKLY = ["player_stats", "pbp", "snap_counts", "weekly_rosters", "injuries", "d
 SEASONAL = ["rosters"]
 STAGEABLE = WEEKLY + SEASONAL
 
+# Datasets whose rows are already unique on a natural key, so the de-dupe pass is
+# skipped. pbp in particular is ~370 columns wide; a full-row DISTINCT hashes every
+# column and exhausts memory, while play rows are already unique on (game_id, play_id).
+_SKIP_DEDUP = {"pbp"}
 
-def _select(source_glob: str, partition_cols: list[str]) -> str:
-    """Clean read: drop exact-duplicate rows and require partition keys to be
-    non-null (rows we can't place in a partition are dropped)."""
+
+def _select(source_glob: str, partition_cols: list[str], *, distinct: bool = True) -> str:
+    """Clean read: optionally drop exact-duplicate rows and require partition keys to
+    be non-null (rows we can't place in a partition are dropped)."""
     not_null = " AND ".join(f"{c} IS NOT NULL" for c in partition_cols)
+    dedup = "DISTINCT " if distinct else ""
     return (
-        f"SELECT DISTINCT * FROM read_parquet('{source_glob}', union_by_name = true) "
+        f"SELECT {dedup}* FROM read_parquet('{source_glob}', union_by_name = true) "
         f"WHERE {not_null}"
     )
 
@@ -45,7 +51,9 @@ def stage_dataset(dataset: str) -> int:
     partition_cols = ["season", "week"] if dataset in WEEKLY else ["season"]
     table = f"nflverse_{dataset}"
     with memory_duckdb() as conn:
-        select_sql = _select(raw_glob("nflverse", dataset), partition_cols)
+        select_sql = _select(
+            raw_glob("nflverse", dataset), partition_cols, distinct=dataset not in _SKIP_DEDUP
+        )
         rows = write_partitioned(conn, select_sql, table, partition_cols)
     if dataset == "pbp":
         # Re-attach the v_pbp view now that staged files exist.
