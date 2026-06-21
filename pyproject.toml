@@ -32,6 +32,7 @@ fdb-migrate = "db.migrate:main"
 fdb-ingest = "scrapers.cli:main"
 fdb-stage = "staging.cli:main"
 fdb-query = "apps.query:main"
+fdb-project = "apps.projections.cli:main"
 
 [build-system]
 requires = ["hatchling"]

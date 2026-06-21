@@ -66,8 +66,23 @@ The player-game pipeline is built end-to-end: `dim_franchises`, `dim_teams`,
 `dim_games`, `fct_player_game_stats`, `fct_vegas_lines`, and `fct_pbp` are populated
 from nflverse weekly stats, schedules, snap counts, Next Gen Stats, and play-by-play
 (2018–2025). Full-fidelity play-by-play also stays in Parquet, exposed as the `v_pbp`
-view. The remaining marts (`fct_projections`, `fct_team_game_stats`) are still
-scaffolded stubs that compile but emit no rows.
+view. `fct_team_game_stats` is still a scaffolded stub that compiles but emits no rows;
+`fct_projections` keeps an empty dbt stub but is populated by the projections app below.
+
+### Building projections (`fdb-project`)
+
+A transparent season-long baseline: project each player's opportunity, price it at a
+regressed (league-anchored) efficiency, score it through `scoring_settings`, and snapshot
+the result to `fct_projections` (`week=0`, `source='my_model_v1'`).
+
+```bash
+uv run fdb-project                       # project next season (latest data + 1)
+uv run fdb-project --dry-run --limit 20  # preview the top 20, write nothing
+uv run fdb-project --season 2024 --through-season 2023   # reproduce a past snapshot
+```
+
+Re-running a given `--snapshot-date` overwrites that snapshot (idempotent), so the
+backtester only ever sees what was known at that date.
 
 ## Status
 
@@ -87,8 +102,10 @@ scaffolded stubs that compile but emit no rows.
   Next Gen Stats, and play-by-play red-zone usage.
 - **fct_pbp + v_pbp**: play-by-play is staged (full 370-col fidelity in `v_pbp`) and a
   trimmed, typed per-play mart (`fct_pbp`, keyed on game_id/play_id) is materialized.
-  Other marts (`fct_projections`, `fct_team_game_stats`): scaffolded stubs.
-- **apps**: `fdb-query` works; the four app packages are stubs.
+  Other marts: `fct_team_game_stats` is a scaffolded stub. `fct_projections` keeps an
+  empty dbt stub, but the projections app now populates it (see below).
+- **apps**: `fdb-query` and `fdb-project` (season-long projections) work;
+  `draft_tool`, `waiver_analyzer`, and `backtester` are stubs.
 
 Add a source by following the nflverse pattern: a `scrapers/<source>.py` that
 writes `data/raw/<source>/...`, then a `staging/<source>.py` that cleans it, then
