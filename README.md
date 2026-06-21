@@ -68,9 +68,15 @@ mark out the joins (crosswalk, team mapping) still to be built.
 ## Status
 
 - **nflverse** scraper + staging: working end-to-end.
-- **pfr, ngs, vegas, fantasypros, sleeper**: stubs with the target raw layout
+- **sleeper** scraper + staging: working end-to-end. Its players list is the
+  crosswalk hub — one snapshot builds `dim_players` (bio) and
+  `player_id_crosswalk` (sleeper, gsis, espn, yahoo, sportradar, rotowire,
+  rotoworld, stats, swish, fantasy_data, oddsjam). Pull on a cadence:
+  `fdb-ingest sleeper && fdb-stage sleeper`, then `dbt run`.
+- **pfr, ngs, vegas, fantasypros**: stubs with the target raw layout
   documented in each module.
-- **dbt marts + dimensions**: scaffolded stubs.
+- **dim_players + player_id_crosswalk**: built from sleeper. Other marts/
+  dimensions: scaffolded stubs.
 - **apps**: `fdb-query` works; the four app packages are stubs.
 
 Add a source by following the nflverse pattern: a `scrapers/<source>.py` that

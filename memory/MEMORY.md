@@ -1,1 +1,2 @@
 - [dbt/migration ownership](dbt-migration-ownership.md) — migrations own DuckDB schema; dbt upserts into it (run fdb-migrate before dbt run)
+- [sleeper crosswalk](sleeper-crosswalk.md) — Sleeper players = crosswalk hub; player_id surrogate minted stably in int_sleeper_player_keys
