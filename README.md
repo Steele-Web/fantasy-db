@@ -84,6 +84,28 @@ uv run fdb-project --season 2024 --through-season 2023   # reproduce a past snap
 Re-running a given `--snapshot-date` overwrites that snapshot (idempotent), so the
 backtester only ever sees what was known at that date.
 
+### Grading projections (`fdb-backtest`)
+
+Grade a snapshot against what actually happened. It loads the season-long snapshot
+from `fct_projections`, sums each player's realized regular-season line from
+`fct_player_game_stats`, scores both through the *same* `scoring_settings` format,
+and reports accuracy overall and per position — MAE, RMSE, bias (signed, so you can
+see systematic over/under-projection), Pearson + Spearman correlation, and how often
+the realized total landed inside the projected floor/ceiling band — plus the biggest
+individual misses.
+
+```bash
+# First build the snapshot for a past season (data only from before it):
+uv run fdb-project  --season 2024 --through-season 2023
+uv run fdb-backtest --season 2024                       # my_model_v1, ppr, latest snapshot
+uv run fdb-backtest --season 2024 --format half_ppr --min-games 4 --misses 20
+```
+
+Actuals are scoped to the regular season (weeks 1–18) to match the 17-game frame the
+projections are built on. `--min-games` sets the universe: the default `1` answers
+"when a player played, how close were we?"; `0` also counts availability misses
+(players projected for points who never took the field).
+
 ## Status
 
 - **nflverse** scraper + staging: working end-to-end.
@@ -104,8 +126,9 @@ backtester only ever sees what was known at that date.
   trimmed, typed per-play mart (`fct_pbp`, keyed on game_id/play_id) is materialized.
   Other marts: `fct_team_game_stats` is a scaffolded stub. `fct_projections` keeps an
   empty dbt stub, but the projections app now populates it (see below).
-- **apps**: `fdb-query` and `fdb-project` (season-long projections) work;
-  `draft_tool`, `waiver_analyzer`, and `backtester` are stubs.
+- **apps**: `fdb-query`, `fdb-project` (season-long projections), and `fdb-backtest`
+  (grades a projection snapshot vs. realized results) work; `draft_tool` and
+  `waiver_analyzer` are stubs.
 
 Add a source by following the nflverse pattern: a `scrapers/<source>.py` that
 writes `data/raw/<source>/...`, then a `staging/<source>.py` that cleans it, then

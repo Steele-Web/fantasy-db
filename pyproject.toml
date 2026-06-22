@@ -33,6 +33,7 @@ fdb-ingest = "scrapers.cli:main"
 fdb-stage = "staging.cli:main"
 fdb-query = "apps.query:main"
 fdb-project = "apps.projections.cli:main"
+fdb-backtest = "apps.backtester.cli:main"
 
 [build-system]
 requires = ["hatchling"]
