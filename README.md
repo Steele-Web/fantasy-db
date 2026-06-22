@@ -126,6 +126,31 @@ availability risk (busts/injuries count), so it recommends wider bands; a higher
 calibrates on players with a real sample. After pasting a new block into the model,
 re-run `fdb-project` to refresh snapshots.
 
+### Drafting (`fdb-draft`)
+
+Turn a projection snapshot into a draft board. Projected points aren't comparable
+across positions — a league starts far more RBs/WRs than QBs/TEs — so the tool
+prices every player by **value over replacement (VOR)**: their projected points
+above the best player at their position you could still get once every starting
+slot in the league is filled. Replacement level falls straight out of the roster in
+`config/leagues.yaml` (FLEX slots are allocated greedily to whichever eligible
+position has the most valuable players left), and players are grouped into
+within-position tiers by VOR cliffs so you can see how much of a positional run you
+can wait out.
+
+```bash
+uv run fdb-draft                              # first league, latest snapshot
+uv run fdb-draft --league home_league --pos RB
+uv run fdb-draft --season 2025 --format half_ppr --limit 80
+uv run fdb-draft --drafted gone.txt           # exclude already-drafted players (live)
+```
+
+`--drafted` takes a file of player names (one per line, `#` comments allowed) to
+drop from the board, recomputing VOR and ranks against who's left — so it doubles as
+a live draft assistant. Defaults (season, scoring format, team count) come from the
+chosen league but are all overridable. K/DST aren't projected, so the board covers
+QB/RB/WR/TE.
+
 ## Status
 
 - **nflverse** scraper + staging: working end-to-end.
@@ -147,9 +172,9 @@ re-run `fdb-project` to refresh snapshots.
   Other marts: `fct_team_game_stats` is a scaffolded stub. `fct_projections` keeps an
   empty dbt stub, but the projections app now populates it (see below).
 - **apps**: `fdb-query`, `fdb-project` (season-long projections), `fdb-backtest`
-  (grades a projection snapshot vs. realized results), and `fdb-calibrate` (recalibrates
-  the projection floor/ceiling band from history) work; `draft_tool` and
-  `waiver_analyzer` are stubs.
+  (grades a projection snapshot vs. realized results), `fdb-calibrate` (recalibrates
+  the projection floor/ceiling band from history), and `fdb-draft` (value-over-
+  replacement draft board from a projection snapshot) work; `waiver_analyzer` is a stub.
 
 Add a source by following the nflverse pattern: a `scrapers/<source>.py` that
 writes `data/raw/<source>/...`, then a `staging/<source>.py` that cleans it, then

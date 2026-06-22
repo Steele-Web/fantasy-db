@@ -35,6 +35,7 @@ fdb-query = "apps.query:main"
 fdb-project = "apps.projections.cli:main"
 fdb-backtest = "apps.backtester.cli:main"
 fdb-calibrate = "apps.backtester.calibrate:main"
+fdb-draft = "apps.draft_tool.cli:main"
 
 [build-system]
 requires = ["hatchling"]
