@@ -102,13 +102,7 @@ def main(argv: list[str] | None = None) -> int:
         names = _player_meta(conn)
 
         # Project every in-scope player once; the line is format-independent.
-        lines: list[model.ProjectedLine] = []
-        for pid, seasons in history.items():
-            line = model.project_player(seasons, season, baselines)
-            if line is None:
-                continue
-            line.player_id = pid
-            lines.append(line)
+        lines = model.project_all(history, season, baselines)
 
         rows = _build_rows(lines, settings, formats, args, season)
 

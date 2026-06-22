@@ -44,9 +44,12 @@ _K = {
     "rec_td": 200.0,
 }
 
-# Per-position season scoring volatility (coefficient of variation) for the v1
-# floor/ceiling band. A heuristic — the first thing to recalibrate from backtests.
-_POSITION_COV = {"QB": 0.18, "RB": 0.32, "WR": 0.34, "TE": 0.38}
+# Per-position season scoring volatility (coefficient of variation) for the
+# floor/ceiling band. Calibrated by `fdb-calibrate --min-games 8` (the ±1σ band
+# covers ~68% of established-role players' realized seasons). Re-run after model
+# changes; the prior heuristic guess was QB .18 / RB .32 / WR .34 / TE .38.
+_POSITION_COV = {"QB": 0.43, "RB": 0.57, "WR": 0.56, "TE": 0.54}
+_DEFAULT_COV = 0.33  # fallback for positions outside _POSITION_COV
 _BAND_Z = 1.0  # ~1 std dev each way
 
 
@@ -339,6 +342,26 @@ def project_player(
     )
 
 
+def project_all(
+    history: dict[int, list[PlayerSeason]],
+    target_season: int,
+    baselines: dict[str, Baseline],
+) -> list[ProjectedLine]:
+    """Project every player in ``history`` for ``target_season``.
+
+    Convenience over :func:`project_player`: drops players with no usable recent
+    history and stamps each returned line with its ``player_id``.
+    """
+    lines: list[ProjectedLine] = []
+    for pid, seasons in history.items():
+        line = project_player(seasons, target_season, baselines)
+        if line is None:
+            continue
+        line.player_id = pid
+        lines.append(line)
+    return lines
+
+
 def _project_games(window: list[PlayerSeason]) -> float:
     """Recency-weighted recent games played, clamped to [1, 17]."""
     recent = window[:2]
@@ -378,7 +401,7 @@ def floor_ceiling(points: float, position: str, games: float) -> tuple[float, fl
     Position coefficient of variation widened when projected games are below a
     full season (more missed-time risk => wider band). Recalibrate from backtests.
     """
-    cov = _POSITION_COV.get(position, 0.33)
+    cov = _POSITION_COV.get(position, _DEFAULT_COV)
     cov *= math.sqrt(_MAX_GAMES / max(1.0, games))
     spread = _BAND_Z * cov
     return max(0.0, points * (1 - spread)), points * (1 + spread)

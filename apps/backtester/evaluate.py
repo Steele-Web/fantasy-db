@@ -280,6 +280,85 @@ def biggest_misses(evals: list[Eval], n: int) -> list[Eval]:
     return sorted(evals, key=lambda e: e.abs_error, reverse=True)[:n]
 
 
+# ---------------------------------------------------------------------------
+# Floor/ceiling band calibration (pure)
+# ---------------------------------------------------------------------------
+#
+# The band in apps.projections.model is points * (1 +/- z * cov * sqrt(max_games /
+# proj_games)). A realized total is "in band" iff |actual/projected - 1| <=
+# z * cov * sqrt(max_games / proj_games). De-scaling the left side by the games
+# factor gives the *normalized residual* r below, so the condition collapses to the
+# games-independent ``r <= z * cov``. Calibration is then just: pick cov per position
+# so the empirical fraction of ``r <= z * cov`` hits the band's nominal coverage.
+
+
+@dataclass
+class CovRecommendation:
+    """Per-position floor/ceiling recalibration: current vs. recommended cov."""
+
+    position: str
+    n: int
+    current_cov: float
+    current_coverage: float  # empirical fraction in-band at current_cov
+    recommended_cov: float
+    target_coverage: float  # nominal coverage the band claims (erf(z/sqrt2))
+
+
+def normalized_residual(
+    projected: float, actual: float, proj_games: float, max_games: float
+) -> float | None:
+    """Games-adjusted relative error ``|actual/projected - 1| / sqrt(max/proj_games)``.
+
+    This is the quantity whose distribution the band's coefficient of variation is
+    meant to describe. Returns ``None`` when there's no projection to divide by.
+    """
+    if projected <= 0:
+        return None
+    scale = math.sqrt(max_games / max(1.0, proj_games))
+    return abs(actual / projected - 1.0) / scale
+
+
+def recommend_covs(
+    samples: list[tuple[str, float]],
+    *,
+    z: float,
+    current_covs: Mapping[str, float],
+    default_cov: float,
+) -> list[CovRecommendation]:
+    """Recommend a per-position cov from ``(position, normalized_residual)`` samples.
+
+    For each position the recommended cov is ``quantile(r, target) / z`` where
+    ``target = erf(z/sqrt2)`` is the coverage a +/-z band claims under normality —
+    so the recalibrated band hits its nominal coverage on this history.
+    """
+    target = math.erf(z / math.sqrt(2.0))
+    by_pos: dict[str, list[float]] = {}
+    for pos, r in samples:
+        by_pos.setdefault(pos, []).append(r)
+    out: list[CovRecommendation] = []
+    for pos in sorted(by_pos, key=_position_sort_key):
+        resids = by_pos[pos]
+        n = len(resids)
+        cur = current_covs.get(pos, default_cov)
+        coverage_now = sum(1 for r in resids if r <= z * cur) / n
+        recommended = _quantile(resids, target) / z if z else 0.0
+        out.append(CovRecommendation(pos, n, cur, coverage_now, recommended, target))
+    return out
+
+
+def _quantile(values: list[float], q: float) -> float:
+    """Linear-interpolated ``q``-quantile (0..1) of ``values``."""
+    if not values:
+        return 0.0
+    xs = sorted(values)
+    if len(xs) == 1:
+        return xs[0]
+    pos = q * (len(xs) - 1)
+    lo = math.floor(pos)
+    hi = min(lo + 1, len(xs) - 1)
+    return xs[lo] * (1 - (pos - lo)) + xs[hi] * (pos - lo)
+
+
 # --- correlation helpers (pure python; no numpy/scipy) -------------------
 
 

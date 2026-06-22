@@ -7,8 +7,10 @@ error/correlation metrics, the biggest-miss ranking) is pure over dataclasses.
 import math
 
 from apps.backtester import evaluate
+from apps.backtester.calibrate import _cov_block, _projectable_seasons
 from apps.backtester.cli import _parse_args
-from apps.backtester.evaluate import Actual, Eval, Projection
+from apps.backtester.evaluate import Actual, CovRecommendation, Eval, Projection
+from apps.projections import model
 
 
 def _proj(pid, points, *, floor=None, ceiling=None):
@@ -138,6 +140,80 @@ def test_biggest_misses_sorts_by_abs_error():
     evals = [_eval(100.0, 95.0), _eval(100.0, 40.0), _eval(100.0, 120.0)]
     worst = evaluate.biggest_misses(evals, 2)
     assert [round(e.abs_error) for e in worst] == [60, 20]
+
+
+# --- band calibration ----------------------------------------------------
+
+_MAX_GAMES = 17
+
+
+def test_normalized_residual_undefined_without_projection():
+    assert evaluate.normalized_residual(0.0, 100.0, 17, _MAX_GAMES) is None
+
+
+def test_normalized_residual_is_games_adjusted_relative_error():
+    # Full season: scale factor is 1, so it's just |actual/proj - 1|.
+    full = evaluate.normalized_residual(100.0, 120.0, 17, _MAX_GAMES)
+    assert math.isclose(full, 0.20)
+    # Same relative miss on a half season is de-scaled by sqrt(17/8.5) = sqrt(2),
+    # so it counts as a *smaller* normalized residual (the band was wider there).
+    half = evaluate.normalized_residual(100.0, 120.0, 8.5, _MAX_GAMES)
+    assert math.isclose(half, 0.20 / math.sqrt(2.0))
+
+
+def test_quantile_interpolates():
+    xs = [0.0, 10.0, 20.0, 30.0]
+    assert math.isclose(evaluate._quantile(xs, 0.0), 0.0)
+    assert math.isclose(evaluate._quantile(xs, 1.0), 30.0)
+    assert math.isclose(evaluate._quantile(xs, 0.5), 15.0)  # midpoint of the spread
+
+
+def test_recommend_covs_hits_target_coverage():
+    # 100 WR residuals spread 0..0.99; with z=1 the recommendation is the
+    # erf(1/sqrt2) ~ 0.683 quantile, and applying it covers ~that fraction.
+    resids = [i / 100.0 for i in range(100)]
+    samples = [("WR", r) for r in resids]
+    recs = evaluate.recommend_covs(samples, z=1.0, current_covs={"WR": 0.10}, default_cov=0.33)
+    assert len(recs) == 1
+    rec = recs[0]
+    assert rec.position == "WR"
+    assert rec.n == 100
+    assert math.isclose(rec.target_coverage, math.erf(1 / math.sqrt(2.0)))
+    # Current cov 0.10 only covers residuals <= 0.10 -> ~10% of the spread.
+    assert math.isclose(rec.current_coverage, 0.10, abs_tol=0.02)
+    # Recommended cov re-expands the band to the target quantile (~0.68).
+    assert 0.6 < rec.recommended_cov < 0.75
+
+
+def test_recommend_covs_orders_positions():
+    samples = [("WR", 0.3), ("QB", 0.2), ("RB", 0.25)]
+    recs = evaluate.recommend_covs(samples, z=1.0, current_covs={}, default_cov=0.33)
+    assert [r.position for r in recs] == ["QB", "RB", "WR"]
+
+
+def test_projectable_seasons_needs_three_years_of_history():
+    # Data 2018-2025 -> first projectable is 2021; default keeps the last 4.
+    assert _projectable_seasons(2018, 2025) == [2022, 2023, 2024, 2025]
+    assert _projectable_seasons(None, None) == []
+
+
+def test_cov_block_is_complete_and_keeps_current_for_missing_positions():
+    # Only QB and WR were recalibrated this run; RB/TE keep their current model
+    # values and UNK (untracked) is dropped — the block is always whole.
+    recs = [
+        CovRecommendation("WR", 10, 0.34, 0.4, 0.51, 0.68),
+        CovRecommendation("QB", 10, 0.18, 0.3, 0.42, 0.68),
+        CovRecommendation("UNK", 5, 0.33, 0.3, 0.9, 0.68),
+    ]
+    block = _cov_block(recs)
+    assert block.splitlines() == [
+        "_POSITION_COV = {",
+        '    "QB": 0.42,',
+        f'    "RB": {model._POSITION_COV["RB"]:.2f},',  # unchanged from the model
+        '    "WR": 0.51,',
+        f'    "TE": {model._POSITION_COV["TE"]:.2f},',  # unchanged from the model
+        "}",
+    ]
 
 
 # --- cli -----------------------------------------------------------------

@@ -106,6 +106,26 @@ projections are built on. `--min-games` sets the universe: the default `1` answe
 "when a player played, how close were we?"; `0` also counts availability misses
 (players projected for points who never took the field).
 
+### Recalibrating the floor/ceiling band (`fdb-calibrate`)
+
+The projection's floor/ceiling band is a per-position coefficient of variation
+(`_POSITION_COV` in `apps/projections/model.py`) that started as a guess. `fdb-calibrate`
+closes the loop: it reruns the *current* model across several past seasons (in-memory —
+no snapshot needed), measures how often each position's realized total actually landed
+inside the band, and recommends the cov that makes the band hit its nominal coverage
+(~68% for the shipped `±1σ` band), printing a copy-pasteable block.
+
+```bash
+uv run fdb-calibrate                       # last 4 projectable seasons, ppr
+uv run fdb-calibrate --seasons 2022,2023,2024 --format half_ppr
+uv run fdb-calibrate --min-games 8         # calibrate on established roles only
+```
+
+`--min-games` chooses the universe the band should cover: `0` (default) prices in
+availability risk (busts/injuries count), so it recommends wider bands; a higher value
+calibrates on players with a real sample. After pasting a new block into the model,
+re-run `fdb-project` to refresh snapshots.
+
 ## Status
 
 - **nflverse** scraper + staging: working end-to-end.
@@ -126,8 +146,9 @@ projections are built on. `--min-games` sets the universe: the default `1` answe
   trimmed, typed per-play mart (`fct_pbp`, keyed on game_id/play_id) is materialized.
   Other marts: `fct_team_game_stats` is a scaffolded stub. `fct_projections` keeps an
   empty dbt stub, but the projections app now populates it (see below).
-- **apps**: `fdb-query`, `fdb-project` (season-long projections), and `fdb-backtest`
-  (grades a projection snapshot vs. realized results) work; `draft_tool` and
+- **apps**: `fdb-query`, `fdb-project` (season-long projections), `fdb-backtest`
+  (grades a projection snapshot vs. realized results), and `fdb-calibrate` (recalibrates
+  the projection floor/ceiling band from history) work; `draft_tool` and
   `waiver_analyzer` are stubs.
 
 Add a source by following the nflverse pattern: a `scrapers/<source>.py` that
